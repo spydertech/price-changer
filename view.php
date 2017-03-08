@@ -201,7 +201,7 @@ if( $_SERVER['REQUEST_METHOD'] == 'POST' ) {
 
         <div class="row">
 
-            <div class="col-md-4  text-center product-photo">
+            <div class="col-md-5  text-center product-photo">
 
                 <!-- The Gallery as lightbox dialog, should be a child element of the document body -->
                 <div id="blueimp-gallery" class="blueimp-gallery blueimp-gallery-controls">
@@ -266,9 +266,9 @@ if( $_SERVER['REQUEST_METHOD'] == 'POST' ) {
             </div>
 
 
-            <div class="col-md-8">
+            <div class="col-md-7">
 
-                <div class="product_details">
+                <div class="col-md-12 product_details">
 
 
 
@@ -279,10 +279,7 @@ if( $_SERVER['REQUEST_METHOD'] == 'POST' ) {
                     <div class="required-product-addon product-addon product-addon-part">
 
                         <form method="post" id="add-to-cart-form" class="form" action="">
-
                             <input type="hidden" name="product_id" id="product_id" value="<?php echo $getID ?>">
-
-
                             <?php
 
                                 if ($product_type =="strut"){
@@ -302,14 +299,16 @@ if( $_SERVER['REQUEST_METHOD'] == 'POST' ) {
                                             $grpnum = 0;
                                             while($selectstrutoptions -> fetch())
                                             {
+												$grpnum++;
                                                 $fgid = "fg_$grpnum";
-                                                $grpnum++;
+                                                
                                                 echo '<input type="hidden" name="type_id[]" value="',$type_id,'">';
                                                 echo '<div class="form-group" id="'.$fgid.'">';
                                                 echo '<div class="partimage"><img src="./assets/img/'.$type_webname.'-'.$product_webname.'.jpg" /></div>';
                                                 echo '<div class="partname">'.$type_name.'</div><br/>';
-                                                echo '<div class="partdropdown">Strut Diameter<br/>
-                                                <select name="strut_diameter[]" id="strut_diameter" class="form-control calculate"><option value="0">- Select Diameter -</option>';
+                                                echo '<div class="clear"></div>';
+                                                echo '<div class="partdropdown">
+                                                <select onchange="fillprice(\''.$grpnum.'\');" name="strut_diameter[]" id="strut_diameter_'.$grpnum.'" class="form-control calculate"><option value="0"><span style="font-color:red">*</span> Select Diameter</option>';
                                                 
                                                 
                             // Prepare and execute the SELECT statement for strut diameter.
@@ -324,26 +323,27 @@ if( $_SERVER['REQUEST_METHOD'] == 'POST' ) {
                                 $selectdiameter -> close();
                             }
                                                 echo '</select></div>';
-                                                echo '<div class="partdropdown">Hardware Options<br/>
-                                                <select name="hardware[]" id="hardware" class="form-control calculate"><option value="0">- Select Hardware -</option>';
+                                                echo '<div class="partdropdown">
+                                                <select onchange="fillprice(\''.$grpnum.'\');" name="hardware[]" id="hardware_'.$grpnum.'" class="form-control calculate"><option value="0"><span style="font-color:red">*</span> Select Hardware</option>';
                                                 
                             $hardwarename ='hardware';
                             // Prepare and execute the SELECT statement for strut hardware.
                             if ($selecthardware = $db -> prepare("SELECT vd.data_id, vd.data_name, vd.data_webname, vd.data_price FROM variation_data AS vd INNER JOIN variation_pivot AS vp ON vd.data_id=vp.data_id INNER JOIN variation_types AS vt ON vp.type_id=vt.type_id WHERE vt.type_parent=? AND vt.type_webname=? ORDER BY vd.data_id ASC")) {
                                 $selecthardware -> bind_param('ss', $type_id, $hardwarename);
                                 $selecthardware  ->  execute();
-                                $selecthardware  ->  bind_result($data_id, $data_name, $data_webname, $data_price);
+                                $selecthardware  ->  bind_result($data_id, $data_name, $data_webname, $data_price2);
                                 $selecthardware -> store_result();
                                 while($selecthardware -> fetch()) {
-                                    echo '<option value="'.$data_id.'" data-price="'.$data_price.'">'.ucwords($data_name).'</option>';
+                                    echo '<option value="'.$data_id.'" data-price="'.$data_price2.'">'.ucwords($data_name).'</option>';
                                 }
                                 $selecthardware -> close();
                             }
                                                 echo '</select></div>';
-                                                echo '<div class="qtydropdown">Quantity<br/>
-                                                <select name="qty[]" id="qty" class="form-control part-qty"><option value="0">0 qty</option>'.$qty_dropdown.'</select></div>';
-                                                echo '<div class="partprice" id="price">Price<br/>';
-                                                echo '<span class="productprice" id="productprice">';
+                                                echo '<div class="clear"></div>';
+                                                echo '<div class="qtydropdown">
+                                                <select onchange="fillprice(\''.$grpnum.'\');" name="qty[]" id="qty_'.$grpnum.'" class="form-control part-qty"><option value="0">0 qty</option>'.$qty_dropdown.'</select></div>';
+                                                echo '<div class="partprice" id="price">';
+                                                echo '<span class="productprice" id="productprice_'.$grpnum.'">$'.$data_price;
                                                 echo '</span>';
                                                 echo '</div>';
                                                 echo '<div class="clear"></div>';
@@ -437,40 +437,29 @@ if( $_SERVER['REQUEST_METHOD'] == 'POST' ) {
 </div>
 <script type="text/javascript">  
 
-function calculate_price(){
+function calculate_price(groupid){
     var total = 0;
-
-    $('.calculate').each(function() {
-       //if($(this).data('price') !=0) {
-            //total += parseFloat($(this).find('option:selected').data('price'));
-            //console.log($(this).find('option:selected').data('price'));
+	var selector = '#fg_' + groupid + ' .calculate'; 
+	
+    $(selector).each(function() {
            var price = Number($(this).find('option:selected').data('price'));
         if(price){
-            console.log('price',price);
+            //console.log('price',price);
             total += price;
         }
-
             //console.log($(this).data('price'));
-        //}
     });
-    var qty = $('#qty').val();
+    var qty = $('#qty_' + groupid).val();
     console.log('total',total,'qty',qty);
-    return (total*qty).toString();
+    return (total*qty).toFixed(2);
 }
 
 $('#strut_diameter, #qty, #hardware').on('change',function(){
-    console.log('calculating');
-    $('#productprice').html('$' + calculate_price())
+    $('#productprice').html('$' + calculate_price());
 });
 
-/*    $('.calculate').change(function() {
-        var total = 0;
- $('.calculate').each(function() {
-            if($(this).data('price') !=0) {
-                total += parseFloat($(this).find('option:selected').data('price'));
-                //alert($(this).find('option:selected').data('price'));
-            }
-            });
-        $('#total').text('$' + total.toFixed(2));
-    });*/
+function fillprice(groupid){
+	$('#productprice_' + groupid).html('$' + calculate_price(groupid));
+}
+    
 </script>

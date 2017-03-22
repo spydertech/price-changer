@@ -123,7 +123,7 @@ if( $_SERVER['REQUEST_METHOD'] == 'POST' ) {
                 $write_cookie = true;
             }
             else {
-                $_SESSION['msg'] = 'Please select a valid product.';
+                $_SESSION['msg'] = 'Please make a selection.';
             }
 
         }
@@ -302,13 +302,18 @@ if( $_SERVER['REQUEST_METHOD'] == 'POST' ) {
 												$grpnum++;
                                                 $fgid = "fg_$grpnum";
                                                 
+                                                echo '<input type="hidden" id="type_name" value="strut">';
                                                 echo '<input type="hidden" name="type_id[]" value="',$type_id,'">';
                                                 echo '<div class="form-group" id="'.$fgid.'">';
                                                 echo '<div class="partimage"><img src="./assets/img/'.$type_webname.'-'.$product_webname.'.jpg" /></div>';
                                                 echo '<div class="partname">'.$type_name.'</div><br/>';
                                                 echo '<div class="clear"></div>';
                                                 echo '<div class="partdropdown">
-                                                <select onchange="fillprice(\''.$grpnum.'\');" name="strut_diameter[]" id="strut_diameter_'.$grpnum.'" class="form-control calculate"><option value="0"><span style="font-color:red">*</span> Select Diameter</option>';
+                                                <select name="strut_diameter[]" id="strut_diameter_'.$grpnum.'" 
+                                                class="strut-diameter form-control calculate"
+                                                data-hardware-field="hardware_'.$grpnum.'" 
+                                                data-qty-field="qty_'.$grpnum.'" data-group-id="'.$grpnum.'">
+                                                <option value="0"><span style="font-color:red">*</span> Select Strut Diameter</option>';
                                                 
                                                 
                             // Prepare and execute the SELECT statement for strut diameter.
@@ -324,7 +329,7 @@ if( $_SERVER['REQUEST_METHOD'] == 'POST' ) {
                             }
                                                 echo '</select></div>';
                                                 echo '<div class="partdropdown">
-                                                <select onchange="fillprice(\''.$grpnum.'\');" name="hardware[]" id="hardware_'.$grpnum.'" class="form-control calculate"><option value="0"><span style="font-color:red">*</span> Select Hardware</option>';
+                                                <select name="hardware[]" disabled data-group-id="'.$grpnum.'" id="hardware_'.$grpnum.'" class="form-control calculate hardware"><option value="0"><span style="font-color:red">*</span> Select Hardware</option>';
                                                 
                             $hardwarename ='hardware';
                             // Prepare and execute the SELECT statement for strut hardware.
@@ -334,14 +339,14 @@ if( $_SERVER['REQUEST_METHOD'] == 'POST' ) {
                                 $selecthardware  ->  bind_result($data_id, $data_name, $data_webname, $data_price2);
                                 $selecthardware -> store_result();
                                 while($selecthardware -> fetch()) {
-                                    echo '<option value="'.$data_id.'" data-price="'.$data_price2.'">'.ucwords($data_name).'</option>';
+                                    echo '<option value="'.$data_id.'" data-price="'.$data_price2.'">'.ucwords($data_name).' (+$'.number_format($data_price2,2).')</option>';
                                 }
                                 $selecthardware -> close();
                             }
                                                 echo '</select></div>';
                                                 echo '<div class="clear"></div>';
                                                 echo '<div class="qtydropdown">
-                                                <select onchange="fillprice(\''.$grpnum.'\');" name="qty[]" id="qty_'.$grpnum.'" class="form-control part-qty"><option value="0">0 qty</option>'.$qty_dropdown.'</select></div>';
+                                                <select name="qty[]" data-group-id="'.$grpnum.'" disabled id="qty_'.$grpnum.'" class="form-control part-qty qty"><option value="0">0 qty</option>'.$qty_dropdown.'</select></div>';
                                                 echo '<div class="partprice" id="price">';
                                                 echo '<span class="productprice" id="productprice_'.$grpnum.'">$'.$data_price;
                                                 echo '</span>';
@@ -357,32 +362,31 @@ if( $_SERVER['REQUEST_METHOD'] == 'POST' ) {
 
 
                             <!-- Product Price -->
-                            <?php if ($product_type == "other"){ ?>
+                            <?php if ($product_type == "other"){ 
+                            $grpnum = 0;?>
 
                                 <input type="hidden" name="other" value="other">
 
                                 <?php if ($product_saleprice > 0){
                                                  
-                                echo '<div class="partprice" id="price">Price<br/>';
-                                echo 'Price: $<span style="text-decoration: line-through">'.number_format($product_price,'2').'</span><br/>';
-                                echo 'Sale Price: $'.number_format($product_price,'2');
-                                echo '</div>';
+                                //saleprice
 
     
                                 }else{
-        
-                                echo '<div class="partprice" id="price">Price<br/>';
-                                echo '<span class="productprice" id="productprice">$'.number_format($product_price, 2).'</span>';
+  
+                                echo '<input type="hidden" name="other_price" id="other_price_'.$grpnum.'" value="'.$product_price.'" data-price="'.$product_price.'" />';
+ 
+                                echo '<div class="partprice" id="price">';
+                                echo '<span class="productprice" id="productprice_'.$grpnum.'">$'.number_format($product_price,2);
+                                echo '</span>';
                                 echo '</div>';
 
-                                } ?>
-                                <div class="qtydropdown">Quantity<br/>
-                                <select name="qty" class="form-control part-qty"><option value="0">0 qty</option><?php echo $qty_dropdown ?></select></div>
+                                echo '<div class="qtydropdown">
+                                      <select name="qty" id="qty_'.$grpnum.'" disabled data-group-id="'.$grpnum.'" class="other-qty form-control part-qty"><option value="0">0 qty</option>'.$qty_dropdown.'</select></div>';
 
-                                <div class="clear"></div>
-
-                            <? } ?>
-                            
+                                }
+                                                               }?>
+                            <div class="clear"></div>
                            
                             <!-- Non Strut Product Options -->
                             <?php if ($product_type == "other"){
@@ -391,23 +395,24 @@ if( $_SERVER['REQUEST_METHOD'] == 'POST' ) {
 
                                     $hardwarename ='hardware';
                                     // Prepare and execute the SELECT statement for strut hardware.
-                                    if ($selecthardware = $db -> prepare("SELECT vd.data_id, vd.data_name, vd.data_webname FROM variation_data AS vd INNER JOIN variation_pivot AS vp ON vd.data_id=vp.data_id INNER JOIN variation_types AS vt ON vp.type_id=vt.type_id WHERE vp.product_id=? AND vt.type_webname=? ORDER BY vd.data_id ASC")) {
+                                    if ($selecthardware = $db -> prepare("SELECT vd.data_id, vd.data_name, vd.data_webname, vd.data_price FROM variation_data AS vd INNER JOIN variation_pivot AS vp ON vd.data_id=vp.data_id INNER JOIN variation_types AS vt ON vp.type_id=vt.type_id WHERE vp.product_id=? AND vt.type_webname=? ORDER BY vd.data_id ASC")) {
                                         $selecthardware -> bind_param('ss', $getID, $hardwarename);
                                         $selecthardware  ->  execute();
-                                        $selecthardware  ->  bind_result($data_id, $data_name, $data_webname);
+                                        $selecthardware  ->  bind_result($data_id, $data_name, $data_webname, $data_price2);
                                         $selecthardware -> store_result();
                                         if ($selecthardware -> num_rows == 0) {
 
                                         }
                                         else {
-                                            echo '<div class="partdropdown">';
-                                            echo 'Hardware Options<br/>
-                                            <select name="hardware" class="form-control"><option value="0">- Select Hardware -</option>';
+                                            echo '<div class="partdropdown">
+                                                <select name="hardware" id="hardware_'.$grpnum.'" data-group-id="'.$grpnum.'" class="other-hardware form-control calculate"><option value="0"><span style="font-color:red">*</span> Select Hardware</option>';
                                             while ($selecthardware->fetch()) {
-                                                echo '<option value="' . $data_id . '">' . ucwords($data_name) . '</option>';
+                                                echo '<option value="'.$data_id.'" data-price="'.($data_price2 + $product_price).'">'.ucwords($data_name).' (+$'.number_format($data_price2,2).')</option>';
                                             }
                                             echo '</select>';
                                             echo '</div>';
+                                            
+                                            echo '<div class="partdropdown">&nbsp;</div>';
                                         }
                                         $selecthardware -> close();
                                     }
@@ -436,7 +441,60 @@ if( $_SERVER['REQUEST_METHOD'] == 'POST' ) {
 
 </div>
 <script type="text/javascript">  
+    jQuery(document).ready(function($){
 
+       $('body').on('click', '.strut-diameter', function(){
+          var hardware =  document.getElementById( $(this).attr('data-hardware-field') );
+          var qty =  document.getElementById( $(this).attr('data-qty-field') );
+
+           if( $(this).val() == '0' ) {
+               hardware.selectedIndex = 0;
+               qty.selectedIndex = 0;
+               hardware.setAttribute('disabled', true);
+               qty.setAttribute('disabled', true);
+
+               noOptionSelected($(this).data('group-id'));
+           }
+           else {
+               hardware.removeAttribute('disabled');
+               qty.removeAttribute('disabled');
+               if(hardware.selectedIndex == 0) {
+                   hardware.selectedIndex = 1;
+               }
+               if(qty.selectedIndex == 0) {
+                   qty.selectedIndex = 1;
+               }
+               fillprice($(this).data('group-id'));
+           }
+       });
+        $('.hardware, .qty').on('change', function(){
+            fillprice($(this).data('group-id'));
+        });
+        $(document).on('click', '.other-hardware', function(){
+            var hardware =  $(this)[0];
+            var qty =  $('.other-qty')[0];
+
+            if( $(this).val() == '0' ) {
+                qty.selectedIndex = 0;
+                qty.setAttribute('disabled', true);
+
+                noOptionSelected($(this).data('group-id'));
+            }
+            else {
+
+                qty.removeAttribute('disabled');
+                if(qty.selectedIndex == 0) {
+                    qty.selectedIndex = 1;
+                }
+                console.log('qty dropdown: '+ qty.selectedIndex)
+                calculateOtherPrice($(this).data('group-id'));
+            }
+
+        });
+        $('.other-qty').on('change', function(){
+            calculateOtherPrice($(this).data('group-id'));
+        });
+    });
 function calculate_price(groupid){
     var total = 0;
 	var selector = '#fg_' + groupid + ' .calculate'; 
@@ -450,7 +508,7 @@ function calculate_price(groupid){
             //console.log($(this).data('price'));
     });
     var qty = $('#qty_' + groupid).val();
-    console.log('total',total,'qty',qty);
+    //console.log('total',total,'qty',qty);
     return (total*qty).toFixed(2);
 }
 
@@ -461,5 +519,23 @@ $('#strut_diameter, #qty, #hardware').on('change',function(){
 function fillprice(groupid){
 	$('#productprice_' + groupid).html('$' + calculate_price(groupid));
 }
-    
+function calculateOtherPrice(groupid) {
+    var price = parseInt($('#other_price_'+groupid).val());
+    var qty = parseInt($('#qty_' + groupid).val());
+    var hardware = $('#hardware_' + groupid+'>option:selected');
+
+    console.log('price: ' + price);
+    console.log('qty: ' + qty);
+    console.log('hd: ' + hardware.attr('data-price'));
+    //var hardware = document.getElementById('#hardware' + groupid);
+
+
+    var total = (parseFloat(hardware.attr('data-price'))  * qty).toFixed(2);
+
+    $('#productprice_' + groupid).html('$' + total);
+}
+function noOptionSelected(groupid) {
+    $('#productprice_' + groupid).html('Select an option');
+
+}
 </script>
